@@ -1,7 +1,6 @@
 import json
 import os
 import sys
-from typing import Any, Dict, Tuple
 
 import numpy as np
 import torch
@@ -17,7 +16,7 @@ TASK_ID = "mlp_lvl2_moons_mixup"
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "output")
 
 
-def get_task_metadata() -> Dict[str, Any]:
+def get_task_metadata():
     return {
         "task_id": TASK_ID,
         "task_type": "classification",
@@ -28,18 +27,18 @@ def get_task_metadata() -> Dict[str, Any]:
     }
 
 
-def set_seed(seed: int = 42) -> None:
+def set_seed(seed=42):
     torch.manual_seed(seed)
     np.random.seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
 
 
-def get_device() -> torch.device:
+def get_device():
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def make_dataloaders(batch_size: int = 64) -> Tuple[DataLoader, DataLoader, int, int]:
+def make_dataloaders(batch_size=64):
     x, y = make_moons(n_samples=2500, noise=0.22, random_state=42)
     x_train, x_val, y_train, y_val = train_test_split(
         x.astype(np.float32),
@@ -62,7 +61,7 @@ def make_dataloaders(batch_size: int = 64) -> Tuple[DataLoader, DataLoader, int,
 
 
 class MoonMLP(nn.Module):
-    def __init__(self, input_dim: int, num_classes: int) -> None:
+    def __init__(self, input_dim, num_classes):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(input_dim, 96),
@@ -74,15 +73,15 @@ class MoonMLP(nn.Module):
             nn.Linear(64, num_classes),
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x):
         return self.net(x)
 
 
-def build_model(input_dim: int, num_classes: int, device: torch.device) -> nn.Module:
+def build_model(input_dim, num_classes, device):
     return MoonMLP(input_dim, num_classes).to(device)
 
 
-def _mixup(features: torch.Tensor, labels: torch.Tensor, num_classes: int, alpha: float = 0.25):
+def _mixup(features, labels, num_classes, alpha=0.25):
     lam = float(np.random.beta(alpha, alpha))
     index = torch.randperm(features.size(0), device=features.device)
     mixed = lam * features + (1.0 - lam) * features[index]
@@ -91,13 +90,7 @@ def _mixup(features: torch.Tensor, labels: torch.Tensor, num_classes: int, alpha
     return mixed, mixed_labels
 
 
-def train(
-    model: nn.Module,
-    train_loader: DataLoader,
-    val_loader: DataLoader,
-    device: torch.device,
-    epochs: int = 80,
-) -> Dict[str, Any]:
+def train(model, train_loader, val_loader, device, epochs=80):
     optimizer = torch.optim.AdamW(model.parameters(), lr=3e-3, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
     history = {"train_loss": [], "val_accuracy": [], "val_f1_macro": []}
@@ -133,7 +126,7 @@ def train(
     return history
 
 
-def evaluate(model: nn.Module, data_loader: DataLoader, device: torch.device) -> Dict[str, float]:
+def evaluate(model, data_loader, device):
     model.eval()
     probs_all, preds_all, targets_all = [], [], []
     with torch.no_grad():
@@ -156,7 +149,7 @@ def evaluate(model: nn.Module, data_loader: DataLoader, device: torch.device) ->
     }
 
 
-def predict(model: nn.Module, data_loader: DataLoader, device: torch.device) -> np.ndarray:
+def predict(model, data_loader, device):
     model.eval()
     preds = []
     with torch.no_grad():
@@ -165,7 +158,7 @@ def predict(model: nn.Module, data_loader: DataLoader, device: torch.device) -> 
     return np.concatenate(preds, axis=0)
 
 
-def save_artifacts(model: nn.Module, history: Dict[str, Any], metrics: Dict[str, Any]) -> None:
+def save_artifacts(model, history, metrics):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     torch.save(model.state_dict(), os.path.join(OUTPUT_DIR, "model.pt"))
     with open(os.path.join(OUTPUT_DIR, "history.json"), "w", encoding="utf-8") as handle:
@@ -174,7 +167,7 @@ def save_artifacts(model: nn.Module, history: Dict[str, Any], metrics: Dict[str,
         json.dump(metrics, handle, indent=2)
 
 
-def main() -> int:
+def main():
     set_seed(42)
     device = get_device()
     train_loader, val_loader, input_dim, num_classes = make_dataloaders()

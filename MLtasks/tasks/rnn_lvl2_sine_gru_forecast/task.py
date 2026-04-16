@@ -1,7 +1,6 @@
 import json
 import os
 import sys
-from typing import Any, Dict, Tuple
 
 import numpy as np
 import torch
@@ -14,7 +13,7 @@ TASK_ID = "rnn_lvl2_sine_gru_forecast"
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "output")
 
 
-def get_task_metadata() -> Dict[str, Any]:
+def get_task_metadata():
     return {
         "task_id": TASK_ID,
         "task_type": "sequence_regression",
@@ -25,18 +24,18 @@ def get_task_metadata() -> Dict[str, Any]:
     }
 
 
-def set_seed(seed: int = 42) -> None:
+def set_seed(seed=42):
     torch.manual_seed(seed)
     np.random.seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
 
 
-def get_device() -> torch.device:
+def get_device():
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def _make_windows(n_samples: int, seq_len: int, seed: int) -> Tuple[np.ndarray, np.ndarray]:
+def _make_windows(n_samples, seq_len, seed):
     rng = np.random.RandomState(seed)
     x = np.zeros((n_samples, seq_len, 1), dtype=np.float32)
     y = np.zeros((n_samples, 1), dtype=np.float32)
@@ -54,7 +53,7 @@ def _make_windows(n_samples: int, seq_len: int, seed: int) -> Tuple[np.ndarray, 
     return x, y
 
 
-def make_dataloaders(batch_size: int = 64) -> Tuple[DataLoader, DataLoader, int, int]:
+def make_dataloaders(batch_size=64):
     seq_len = 30
     x, y = _make_windows(3200, seq_len, seed=42)
     split = int(0.8 * len(x))
@@ -69,21 +68,21 @@ def make_dataloaders(batch_size: int = 64) -> Tuple[DataLoader, DataLoader, int,
 
 
 class SineGRU(nn.Module):
-    def __init__(self, hidden_size: int = 64) -> None:
+    def __init__(self, hidden_size=64):
         super().__init__()
         self.gru = nn.GRU(input_size=1, hidden_size=hidden_size, num_layers=2, batch_first=True, dropout=0.05)
         self.head = nn.Sequential(nn.LayerNorm(hidden_size), nn.Linear(hidden_size, 32), nn.SiLU(), nn.Linear(32, 1))
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x):
         out, _ = self.gru(x)
         return self.head(out[:, -1, :])
 
 
-def build_model(seq_len: int, output_dim: int, device: torch.device) -> nn.Module:
+def build_model(seq_len, output_dim, device):
     return SineGRU().to(device)
 
 
-def train(model: nn.Module, train_loader: DataLoader, val_loader: DataLoader, device: torch.device, epochs: int = 30) -> Dict[str, Any]:
+def train(model, train_loader, val_loader, device, epochs=30):
     criterion = nn.SmoothL1Loss(beta=0.05)
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
@@ -116,7 +115,7 @@ def train(model: nn.Module, train_loader: DataLoader, val_loader: DataLoader, de
     return history
 
 
-def evaluate(model: nn.Module, data_loader: DataLoader, device: torch.device) -> Dict[str, float]:
+def evaluate(model, data_loader, device):
     model.eval()
     preds, targets = [], []
     with torch.no_grad():
@@ -132,7 +131,7 @@ def evaluate(model: nn.Module, data_loader: DataLoader, device: torch.device) ->
     }
 
 
-def predict(model: nn.Module, data_loader: DataLoader, device: torch.device) -> np.ndarray:
+def predict(model, data_loader, device):
     model.eval()
     outputs = []
     with torch.no_grad():
@@ -141,7 +140,7 @@ def predict(model: nn.Module, data_loader: DataLoader, device: torch.device) -> 
     return np.concatenate(outputs).reshape(-1)
 
 
-def save_artifacts(model: nn.Module, history: Dict[str, Any], metrics: Dict[str, Any]) -> None:
+def save_artifacts(model, history, metrics):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     torch.save(model.state_dict(), os.path.join(OUTPUT_DIR, "model.pt"))
     with open(os.path.join(OUTPUT_DIR, "history.json"), "w", encoding="utf-8") as handle:
@@ -150,7 +149,7 @@ def save_artifacts(model: nn.Module, history: Dict[str, Any], metrics: Dict[str,
         json.dump(metrics, handle, indent=2)
 
 
-def main() -> int:
+def main():
     set_seed(42)
     device = get_device()
     train_loader, val_loader, seq_len, output_dim = make_dataloaders()

@@ -1,7 +1,6 @@
 import json
 import os
 import sys
-from typing import Any, Dict, Tuple
 
 import numpy as np
 import torch
@@ -17,7 +16,7 @@ TASK_ID = "ae_lvl3_breastcancer_sparse_denoising"
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "output")
 
 
-def get_task_metadata() -> Dict[str, Any]:
+def get_task_metadata():
     return {
         "task_id": TASK_ID,
         "task_type": "autoencoder",
@@ -28,18 +27,18 @@ def get_task_metadata() -> Dict[str, Any]:
     }
 
 
-def set_seed(seed: int = 42) -> None:
+def set_seed(seed=42):
     torch.manual_seed(seed)
     np.random.seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
 
 
-def get_device() -> torch.device:
+def get_device():
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def make_dataloaders(batch_size: int = 32) -> Tuple[DataLoader, DataLoader, int, int]:
+def make_dataloaders(batch_size=32):
     data = load_breast_cancer()
     x = data.data.astype(np.float32)
     x_train, x_val = train_test_split(x, test_size=0.2, random_state=42, stratify=data.target)
@@ -57,7 +56,7 @@ def make_dataloaders(batch_size: int = 32) -> Tuple[DataLoader, DataLoader, int,
 
 
 class SparseDenoisingAE(nn.Module):
-    def __init__(self, input_dim: int, latent_dim: int) -> None:
+    def __init__(self, input_dim, latent_dim):
         super().__init__()
         self.encoder = nn.Sequential(
             nn.Linear(input_dim, 48),
@@ -71,22 +70,22 @@ class SparseDenoisingAE(nn.Module):
             nn.Linear(48, input_dim),
         )
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x):
         z = self.encoder(x)
         return self.decoder(z), z
 
 
-def build_model(input_dim: int, latent_dim: int, device: torch.device) -> nn.Module:
+def build_model(input_dim, latent_dim, device):
     return SparseDenoisingAE(input_dim, latent_dim).to(device)
 
 
-def _corrupt(x: torch.Tensor, noise_std: float = 0.08, drop_prob: float = 0.08) -> torch.Tensor:
+def _corrupt(x, noise_std=0.08, drop_prob=0.08):
     noisy = x + noise_std * torch.randn_like(x)
     keep = (torch.rand_like(x) > drop_prob).float()
     return noisy * keep
 
 
-def train(model: nn.Module, train_loader: DataLoader, val_loader: DataLoader, device: torch.device, epochs: int = 120) -> Dict[str, Any]:
+def train(model, train_loader, val_loader, device, epochs=120):
     optimizer = torch.optim.AdamW(model.parameters(), lr=2e-3, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=10)
     history = {"train_loss": [], "val_mse": [], "val_r2": []}
@@ -113,7 +112,7 @@ def train(model: nn.Module, train_loader: DataLoader, val_loader: DataLoader, de
     return history
 
 
-def evaluate(model: nn.Module, data_loader: DataLoader, device: torch.device) -> Dict[str, float]:
+def evaluate(model, data_loader, device):
     model.eval()
     recons, targets = [], []
     with torch.no_grad():
@@ -130,7 +129,7 @@ def evaluate(model: nn.Module, data_loader: DataLoader, device: torch.device) ->
     }
 
 
-def predict(model: nn.Module, data_loader: DataLoader, device: torch.device) -> np.ndarray:
+def predict(model, data_loader, device):
     model.eval()
     outputs = []
     with torch.no_grad():
@@ -140,7 +139,7 @@ def predict(model: nn.Module, data_loader: DataLoader, device: torch.device) -> 
     return np.concatenate(outputs, axis=0)
 
 
-def save_artifacts(model: nn.Module, history: Dict[str, Any], metrics: Dict[str, Any]) -> None:
+def save_artifacts(model, history, metrics):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     torch.save(model.state_dict(), os.path.join(OUTPUT_DIR, "model.pt"))
     with open(os.path.join(OUTPUT_DIR, "history.json"), "w", encoding="utf-8") as handle:
@@ -149,7 +148,7 @@ def save_artifacts(model: nn.Module, history: Dict[str, Any], metrics: Dict[str,
         json.dump(metrics, handle, indent=2)
 
 
-def main() -> int:
+def main():
     set_seed(42)
     device = get_device()
     train_loader, val_loader, input_dim, latent_dim = make_dataloaders()
