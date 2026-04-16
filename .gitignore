@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+output/
+MLtasks/tasks/*/output/
+.DS_Store
+

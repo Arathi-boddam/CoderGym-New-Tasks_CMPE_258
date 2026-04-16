@@ -1,0 +1,91 @@
+{
+  "version": "1.0.0",
+  "prompt_language": "en",
+  "interface_protocols": {
+    "pytorch_task_v1": {
+      "entrypoint": "python MLtasks/tasks/<task_id>/task.py",
+      "prompt_instructions": "Implement this ML task as a single self-contained Python file. Include all required functions and a complete main block that trains, evaluates, prints metrics, saves artifacts, and exits with sys.exit(exit_code).",
+      "must_have_files": [
+        "MLtasks/tasks/<task_id>/task.py"
+      ],
+      "required_functions": [
+        "get_task_metadata",
+        "set_seed",
+        "get_device",
+        "make_dataloaders",
+        "build_model",
+        "train",
+        "evaluate",
+        "predict",
+        "save_artifacts"
+      ],
+      "evaluation_rules": [
+        "The evaluate() function must compute validation metrics appropriate for the task.",
+        "The main block must train, evaluate train and validation splits, print metrics, save artifacts, and return non-zero on failed thresholds.",
+        "All neural model training must be implemented in PyTorch."
+      ]
+    }
+  },
+  "tasks": [
+    {
+      "series": "Neural Networks (MLP)",
+      "level": 2,
+      "id": "mlp_lvl2_moons_mixup",
+      "algorithm": "MLP Classification (Two Moons + Mixup)",
+      "description": "Train a PyTorch MLP on sklearn two-moons data with mixup regularization, AdamW, cosine LR, and gradient clipping.",
+      "interface_protocol": "pytorch_task_v1",
+      "requirements": {
+        "data": "Use sklearn.datasets.make_moons with noise and an 80/20 stratified split.",
+        "implementation": "Use nn.Module MLP, mixup, AdamW, cosine scheduler, and gradient clipping.",
+        "evaluation": "Report accuracy, macro-F1, MSE, and R2 against one-hot labels.",
+        "validation": "Exit 0 only when validation accuracy and macro-F1 are above 0.94.",
+        "artifacts": "Save model.pt, history.json, and metrics.json."
+      }
+    },
+    {
+      "series": "Convolutional Neural Networks",
+      "level": 3,
+      "id": "cnn_lvl3_synthetic_shapes_cutout",
+      "algorithm": "CNN Classification (Synthetic Shapes + Cutout)",
+      "description": "Train a compact CNN on generated 16x16 shape images with cutout augmentation and label smoothing.",
+      "interface_protocol": "pytorch_task_v1",
+      "requirements": {
+        "data": "Generate four classes of synthetic shape images without downloads.",
+        "implementation": "Use Conv2d blocks, cutout augmentation, AdamW, cosine LR, and label smoothing cross entropy.",
+        "evaluation": "Report accuracy, macro-F1, MSE, and R2 against one-hot labels.",
+        "validation": "Exit 0 only when validation accuracy and macro-F1 are above 0.97.",
+        "artifacts": "Save model.pt, history.json, and metrics.json."
+      }
+    },
+    {
+      "series": "Sequence Models (RNN/LSTM)",
+      "level": 2,
+      "id": "rnn_lvl2_sine_gru_forecast",
+      "algorithm": "GRU Forecasting (Noisy Sine Waves)",
+      "description": "Train a GRU forecaster on synthetic noisy sine-wave windows using OneCycleLR and gradient clipping.",
+      "interface_protocol": "pytorch_task_v1",
+      "requirements": {
+        "data": "Generate variable-frequency noisy sine windows and predict the next value.",
+        "implementation": "Use nn.GRU, AdamW, OneCycleLR, Huber loss, and gradient clipping.",
+        "evaluation": "Report MSE, MAE, and R2.",
+        "validation": "Exit 0 only when validation R2 is above 0.85 and MSE is below 0.04.",
+        "artifacts": "Save model.pt, history.json, and metrics.json."
+      }
+    },
+    {
+      "series": "Autoencoders",
+      "level": 3,
+      "id": "ae_lvl3_breastcancer_sparse_denoising",
+      "algorithm": "Sparse Denoising Autoencoder (Breast Cancer Features)",
+      "description": "Train a denoising autoencoder on standardized sklearn breast-cancer features with a sparse latent penalty.",
+      "interface_protocol": "pytorch_task_v1",
+      "requirements": {
+        "data": "Use sklearn.datasets.load_breast_cancer with standardized numeric features.",
+        "implementation": "Use encoder-decoder MLP, Gaussian/dropout corruption, AdamW, sparse latent L1 penalty, and ReduceLROnPlateau.",
+        "evaluation": "Report reconstruction MSE, MAE, and R2.",
+        "validation": "Exit 0 only when validation R2 is above 0.78 and MSE is below 0.22.",
+        "artifacts": "Save model.pt, history.json, and metrics.json."
+      }
+    }
+  ]
+}
